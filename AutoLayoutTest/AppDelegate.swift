@@ -12,11 +12,24 @@ import CoreData
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
 
+    var window: UIWindow?
+    
+
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        
+        
+//        // 여기 추가!
+//        window = UIWindow(frame: UIScreen.main.bounds)
+//        window?.rootViewController = ViewController() // ViewController 인스턴스 생성해서 추가
+//        window?.makeKeyAndVisible()
+
+        
+        
         return true
     }
+    
 
     // MARK: UISceneSession Lifecycle
 

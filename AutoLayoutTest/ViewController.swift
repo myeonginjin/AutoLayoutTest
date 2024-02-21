@@ -15,8 +15,8 @@ class ViewController: UIViewController {
         
         let imageView = UIImageView(frame: self.view.frame)
         
-        
-          
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+
         imageView.image = UIImage(ciImage: inputImage!)
 
     
@@ -34,7 +34,7 @@ class ViewController: UIViewController {
         greenSlider.layer.position = CGPoint(x:self.view.frame.midX, y:700)
 
         
-        greenSlider.translatesAutoresizingMaskIntoConstraints = false
+//        greenSlider.translatesAutoresizingMaskIntoConstraints = false
         greenSlider.backgroundColor = UIColor.white
         greenSlider.layer.cornerRadius = 10.0
         greenSlider.layer.shadowOpacity = 0.5
@@ -63,10 +63,10 @@ class ViewController: UIViewController {
 
         
         NSLayoutConstraint.activate([
-//             imageView.topAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.topAnchor, constant: 50),
-//             imageView.bottomAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.bottomAnchor, constant: -300),
-//             imageView.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor, constant: 10),
-//             imageView.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor, constant: -10),
+             imageView.topAnchor.constraint(equalTo: self.view.topAnchor),
+             imageView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+             imageView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+             imageView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
 //             slider.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 100),
 //             slider.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor, constant: 100),
 //             slider.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor, constant: -100)

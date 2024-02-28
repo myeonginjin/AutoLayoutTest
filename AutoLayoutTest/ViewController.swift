@@ -1,7 +1,7 @@
 
 import UIKit
 
-class ViewController: UIViewController {
+class ViewController: UIViewController , UICollectionViewDataSource, UICollectionViewDelegateFlowLayout{
 
     private let toptabBar : UIView = UIView()
     private let galleryBtn : UIButton = UIButton()
@@ -14,6 +14,7 @@ class ViewController: UIViewController {
     private let likeBtn : UIButton = UIButton()
     private let filterView : UIView  = UIView()
     private let inputImage = CIImage(image: UIImage(named: "input.jpg")!)
+    private var collectionView: UICollectionView!
 
     
     override func viewDidLoad() {
@@ -52,11 +53,13 @@ class ViewController: UIViewController {
         editBar.addSubview(slider2)
         editBar.addSubview(likeBtn)
         
+        setupCollectionView()
+        
         
         self.view.addSubview(toptabBar)
         self.view.addSubview(imageView)
         self.view.addSubview(editBar)
-        self.view.addSubview(filterView)
+//        self.view.addSubview(filterView)
 
 
         
@@ -90,7 +93,7 @@ class ViewController: UIViewController {
             editBar.heightAnchor.constraint(equalToConstant: 50),
             editBar.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor),
             editBar.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor),
-            editBar.bottomAnchor.constraint(equalTo:filterView.topAnchor, constant: -16),
+            editBar.bottomAnchor.constraint(equalTo:collectionView.topAnchor, constant: -16),
             
             slider1.leadingAnchor.constraint(equalTo: editBar.leadingAnchor, constant: 24),
             slider1.topAnchor.constraint(equalTo: editBar.topAnchor, constant: 8),
@@ -108,20 +111,94 @@ class ViewController: UIViewController {
             likeBtn.bottomAnchor.constraint(equalTo: editBar.bottomAnchor, constant: -8),
             likeBtn.widthAnchor.constraint(equalToConstant: 30),
             
-            filterView.heightAnchor.constraint(equalToConstant: 100),
-            filterView.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor),
-            filterView.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor),
-            filterView.bottomAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.bottomAnchor, constant: -56),
+//            filterView.heightAnchor.constraint(equalToConstant: 100),
+//            filterView.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor),
+//            filterView.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor),
+//            filterView.bottomAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.bottomAnchor, constant: -56),
         ])
         
-        
+    
     }
     
+    func setupCollectionView() {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .horizontal
+        layout.itemSize = CGSize(width: 70, height: 70)
+        
+        collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        collectionView.register(FilterButtonCell.self, forCellWithReuseIdentifier: "FilterButtonCell")
+        collectionView.dataSource = self
+        collectionView.delegate = self
+        view.addSubview(collectionView)
+        
+        NSLayoutConstraint.activate([
+            collectionView.heightAnchor.constraint(equalToConstant: 110),
+            collectionView.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.bottomAnchor, constant: -56),
+        ])
+        
+        collectionView.backgroundColor = .gray
+    }
     
-
-
-
-
+    // MARK: UICollectionView DataSource & DelegateFlowLayout
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return 8
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "FilterButtonCell", for: indexPath) as? FilterButtonCell else {
+            fatalError("Unable to dequeue FilterButtonCell")
+        }
+        cell.configure(with: UIImage(named: "input.jpg")!, name: "Filter \(indexPath.row)")
+        return cell
+    }
+    
 }
 
 
+
+// MARK: - FilterButtonCell
+class FilterButtonCell: UICollectionViewCell {
+    private let thumbnailImageView = UIImageView()
+    private let nameLabel = UILabel()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupViews()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupViews() {
+        thumbnailImageView.contentMode = .scaleAspectFit
+        contentView.addSubview(thumbnailImageView)
+        
+        nameLabel.textAlignment = .center
+        nameLabel.font = UIFont.systemFont(ofSize: 12)
+        contentView.addSubview(nameLabel)
+        
+        thumbnailImageView.translatesAutoresizingMaskIntoConstraints = false
+        nameLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            thumbnailImageView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            thumbnailImageView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            thumbnailImageView.widthAnchor.constraint(equalTo: contentView.widthAnchor),
+            thumbnailImageView.heightAnchor.constraint(equalTo: thumbnailImageView.widthAnchor),
+            
+            nameLabel.topAnchor.constraint(equalTo: thumbnailImageView.bottomAnchor, constant: 8),
+            nameLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            nameLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            nameLabel.heightAnchor.constraint(equalToConstant: 10)
+        ])
+    }
+    
+    func configure(with image: UIImage, name: String) {
+        thumbnailImageView.image = image
+        nameLabel.text = name
+    }
+}

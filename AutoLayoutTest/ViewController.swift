@@ -1,6 +1,16 @@
 
 import UIKit
 
+
+
+struct XMLFilter {
+    var name: String = ""
+}
+
+
+
+
+
 class ViewController: UIViewController , UICollectionViewDataSource, UICollectionViewDelegateFlowLayout{
 
     private let toptabBar : UIView = UIView()
@@ -16,6 +26,8 @@ class ViewController: UIViewController , UICollectionViewDataSource, UICollectio
     private let inputImage = CIImage(image: UIImage(named: "input.jpg")!)
     private var collectionView: UICollectionView!
 
+    private var xmlFiltersList: [XMLFilter] = []
+    
     
     override func viewDidLoad() {
         
@@ -53,8 +65,11 @@ class ViewController: UIViewController , UICollectionViewDataSource, UICollectio
         editBar.addSubview(slider2)
         editBar.addSubview(likeBtn)
         
-        setupCollectionView()
         
+        
+        
+        setupCollectionView()
+        loadXMLFiltersData()
         
         self.view.addSubview(toptabBar)
         self.view.addSubview(imageView)
@@ -120,6 +135,8 @@ class ViewController: UIViewController , UICollectionViewDataSource, UICollectio
     
     }
     
+    
+    
     func setupCollectionView() {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
@@ -144,16 +161,137 @@ class ViewController: UIViewController , UICollectionViewDataSource, UICollectio
     
     // MARK: UICollectionView DataSource & DelegateFlowLayout
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 8
+        return xmlFiltersList.count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "FilterButtonCell", for: indexPath) as? FilterButtonCell else {
             fatalError("Unable to dequeue FilterButtonCell")
         }
-        cell.configure(with: UIImage(named: "input.jpg")!, name: "Filter \(indexPath.row)")
+        let filter = xmlFiltersList[indexPath.row]
+        cell.configure(with: UIImage(named: "input.jpg")!, name: "\(filter.name)")
         return cell
     }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        
+    
+        let filterName = xmlFiltersList[indexPath.row].name
+        
+        print(filterName)
+        applyFilter(filterName: filterName)
+        
+    }
+    
+    func applyFilter(filterName: String) {
+        
+        
+        if let filter = CIFilter(name: filterName) {
+            filter.setValue(inputImage, forKey: kCIInputImageKey)
+            
+            // 필터마다 필요한 추가 파라미터 설정
+            switch filterName {
+            case "CISepiaTone":
+                filter.setValue(0.8, forKey: kCIInputIntensityKey) // 세피아 강도 설정
+            case "CIVignette":
+                filter.setValue(2, forKey: kCIInputIntensityKey) // 빈야트 강도 설정
+                filter.setValue(30, forKey: kCIInputRadiusKey) // 빈야트 반경 설정
+            case "CIColorControls":
+                filter.setValue(0.5, forKey: kCIInputBrightnessKey) // 밝기 조절
+                filter.setValue(1.5, forKey: kCIInputContrastKey) // 대비 조절
+                filter.setValue(1.2, forKey: kCIInputSaturationKey) // 채도 조절
+            case "CIColorMonochrome":
+                filter.setValue(CIColor(color: UIColor.gray), forKey: "inputColor") // 흑백 색상 설정
+                filter.setValue(1.0, forKey: "inputIntensity") // 색상 강도 설정
+            case "CIPhotoEffectChrome":
+                
+                break
+            default:
+                print("Filter not supported")
+            }
+            
+            let context = CIContext()
+            if let outputImage = filter.outputImage, let cgImage = context.createCGImage(outputImage, from: outputImage.extent) {
+                DispatchQueue.main.async {
+                    self.imageView.image = UIImage(cgImage: cgImage)
+                }
+            } else {
+                print("Failed to create output image")
+            }
+        }
+    }
+
+        
+        
+    
+    
+    func loadXMLFiltersData() {
+        if let url = Bundle.main.url(forResource: "filters", withExtension: "xml"),
+           let data = try? Data(contentsOf: url) {
+            print("XML 데이터 로드 성공") // 성공적으로 로드되었는지 확인
+            let parser = XMLFiltersParser()
+            let xmlFilters = parser.parse(data: data)
+            self.xmlFiltersList = xmlFilters
+            collectionView.reloadData()
+        } else {
+            print("XML 데이터 로드 실패") // 파일 로드 실패 시
+        }
+    }
+    
+    class XMLFiltersParser: NSObject, XMLParserDelegate {
+        var filters: [XMLFilter] = []
+        var currentElement = ""
+        var currentFilter: XMLFilter?
+        var currentValue = ""
+
+        // 추가된 parse(data:) 메서드
+        func parse(data: Data) -> [XMLFilter] {
+            let parser = XMLParser(data: data)
+            parser.delegate = self
+            parser.parse()
+            return filters
+        }
+
+        // 태그의 시작
+        func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String] = [:]) {
+            
+            print("시작 태그: \(elementName)")
+            
+            currentElement = elementName
+            if elementName == "filter" {
+                currentFilter = XMLFilter()
+            }
+        }
+
+        // 태그 사이의 문자열
+        func parser(_ parser: XMLParser, foundCharacters string: String) {
+            
+            print("찾은 문자열: \(string)")
+            
+            currentValue += string
+        }
+
+        // 태그의 끝
+        func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
+            
+            print("종료 태그: \(elementName)")
+            
+            switch elementName {
+            case "filter":
+                if let filter = currentFilter {
+                    filters.append(filter)
+                }
+                currentFilter = nil
+            case "name":
+                currentFilter?.name = currentValue.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            default:
+                currentFilter?.name = currentValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            currentValue = ""
+        }
+    }
+    
     
 }
 
@@ -178,7 +316,7 @@ class FilterButtonCell: UICollectionViewCell {
         contentView.addSubview(thumbnailImageView)
         
         nameLabel.textAlignment = .center
-        nameLabel.font = UIFont.systemFont(ofSize: 12)
+        nameLabel.font = UIFont.systemFont(ofSize: 10)
         contentView.addSubview(nameLabel)
         
         thumbnailImageView.translatesAutoresizingMaskIntoConstraints = false

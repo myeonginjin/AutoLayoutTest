@@ -1,0 +1,17 @@
+<filters>
+    <filter>
+        <name>CISepiaTone</name>
+    </filter>
+    <filter>
+        <name>CIVignette</name>
+    </filter>
+    <filter>
+        <name>CIColorControls</name>
+    </filter>
+    <filter>
+        <name>CIColorMonochrome</name>
+    </filter>
+    <filter>
+        <name>CIPhotoEffectChrome</name>
+    </filter>
+</filters>

@@ -1,7 +1,6 @@
 
 import UIKit
-
-
+import PhotosUI
 
 struct XMLFilter {
     var name: String = ""
@@ -11,13 +10,19 @@ struct XMLFilter {
 
 
 
-class ViewController: UIViewController , UICollectionViewDataSource, UICollectionViewDelegateFlowLayout{
+class ViewController: UIViewController , UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UIImagePickerControllerDelegate, UINavigationControllerDelegate{
 
     private let toptabBar : UIView = UIView()
     private let galleryBtn : UIButton = UIButton()
     private let toggleBtn : UIButton = UIButton()
     private let saveBtn : UIButton = UIButton()
-    private let imageView : UIImageView = UIImageView()
+    private let imageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
     private let editBar : UIView = UIView()
     private let slider1 : UISlider = UISlider()
     private let slider2 : UISlider = UISlider()
@@ -28,6 +33,8 @@ class ViewController: UIViewController , UICollectionViewDataSource, UICollectio
 
     private var xmlFiltersList: [XMLFilter] = []
     
+    private var originalImage: UIImage?
+    private var filteredImage: UIImage?
     
     override func viewDidLoad() {
         
@@ -59,7 +66,7 @@ class ViewController: UIViewController , UICollectionViewDataSource, UICollectio
         toptabBar.addSubview(saveBtn)
         
         
-        imageView.image = UIImage(ciImage: inputImage!)
+    
         
         editBar.addSubview(slider1)
         editBar.addSubview(slider2)
@@ -76,7 +83,24 @@ class ViewController: UIViewController , UICollectionViewDataSource, UICollectio
         self.view.addSubview(editBar)
 //        self.view.addSubview(filterView)
 
-
+        
+        // slider2 설정
+        slider2.minimumValue = 0.0  // 최소 투명도 값
+        slider2.maximumValue = 1.0  // 최대 투명도 값
+        slider2.value = 1.0  // 초기 투명도 값 (기본적으로 이미지가 완전 불투명하도록 설정)
+        slider2.addTarget(self, action: #selector(slider2ValueChanged(_:)), for: .valueChanged)
+        
+        
+        galleryBtn.setTitle("Gallery", for: .normal)
+        galleryBtn.addTarget(self, action: #selector(openGallery(_:)), for: .touchUpInside)
+        
+        toggleBtn.setTitle("Toggle", for: .normal)
+        toggleBtn.addTarget(self, action: #selector(toggleImage), for: .touchDown)
+        toggleBtn.addTarget(self, action: #selector(showFilteredImage), for: .touchUpInside)
+        
+        saveBtn.setTitle("Save", for: .normal)
+        saveBtn.addTarget(self, action: #selector(saveImage), for: .touchUpInside)
+        
         
         NSLayoutConstraint.activate([
             toptabBar.topAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.topAnchor, constant: 24),
@@ -135,7 +159,63 @@ class ViewController: UIViewController , UICollectionViewDataSource, UICollectio
     
     }
     
+    @objc private func openGallery() {
+        let picker = UIImagePickerController()
+        picker.delegate = self
+        picker.sourceType = .photoLibrary
+        present(picker, animated: true)
+    }
     
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        guard let image = info[.originalImage] as? UIImage else { return }
+        originalImage = image
+
+        imageView.image = originalImage
+        dismiss(animated: true)
+    }
+    
+    @objc private func toggleImage() {
+        imageView.image = originalImage
+    }
+
+    @objc private func showFilteredImage() {
+        imageView.image = filteredImage
+    }
+    
+    @objc private func saveImage() {
+        guard let imageToSave = imageView.image else { return }
+        UIImageWriteToSavedPhotosAlbum(imageToSave, self, #selector(image(_:didFinishSavingWithError:contextInfo:)), nil)
+    }
+
+    @objc func image(_ image: UIImage, didFinishSavingWithError error: Error?, contextInfo: UnsafeRawPointer) {
+        if let error = error {
+            // 에러 처리
+            showToast(message: "Error saving image: \(error.localizedDescription)", seconds: 0.5)
+        } else {
+            // 저장 성공 알림
+            showToast(message: "Image successfully saved", seconds: 0.5)
+        }
+    }
+    
+    @objc func slider2ValueChanged(_ sender: UISlider) {
+        imageView.alpha = CGFloat(sender.value)
+    }
+
+
+    func showToast(message : String, seconds: Double){
+        let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        alert.view.backgroundColor = UIColor.black
+        alert.view.alpha = 0.6
+        alert.view.layer.cornerRadius = 15
+
+        present(alert, animated: true)
+
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + seconds){
+            alert.dismiss(animated: true)
+        }
+    }
+    
+
     
     func setupCollectionView() {
         let layout = UICollectionViewFlowLayout()
@@ -184,11 +264,12 @@ class ViewController: UIViewController , UICollectionViewDataSource, UICollectio
     }
     
     func applyFilter(filterName: String) {
-        
-        
+        guard let originalImage = originalImage else { return }
+        let ciImage = CIImage(image: originalImage) // UIImage를 CIImage로 변환
+
         if let filter = CIFilter(name: filterName) {
-            filter.setValue(inputImage, forKey: kCIInputImageKey)
-            
+            filter.setValue(ciImage, forKey: kCIInputImageKey) // CIImage 사용
+
             // 필터마다 필요한 추가 파라미터 설정
             switch filterName {
             case "CISepiaTone":
@@ -204,16 +285,19 @@ class ViewController: UIViewController , UICollectionViewDataSource, UICollectio
                 filter.setValue(CIColor(color: UIColor.gray), forKey: "inputColor") // 흑백 색상 설정
                 filter.setValue(1.0, forKey: "inputIntensity") // 색상 강도 설정
             case "CIPhotoEffectChrome":
-                
+                // 크롬 효과는 추가 파라미터가 필요 없습니다.
                 break
             default:
                 print("Filter not supported")
+                return
             }
-            
+
             let context = CIContext()
-            if let outputImage = filter.outputImage, let cgImage = context.createCGImage(outputImage, from: outputImage.extent) {
+            if let outputCIImage = filter.outputImage,
+               let cgImage = context.createCGImage(outputCIImage, from: outputCIImage.extent) {
                 DispatchQueue.main.async {
                     self.imageView.image = UIImage(cgImage: cgImage)
+                    self.filteredImage = UIImage(cgImage: cgImage) // 필터 적용 이미지 저장
                 }
             } else {
                 print("Failed to create output image")
@@ -291,6 +375,24 @@ class ViewController: UIViewController , UICollectionViewDataSource, UICollectio
             currentValue = ""
         }
     }
+    
+    
+    // ViewController 클래스 내에 추가합니다.
+
+    @objc func openGallery(_ sender: UIButton) {
+        guard UIImagePickerController.isSourceTypeAvailable(.photoLibrary) else {
+            // 갤러리 사용 불가능 알림
+            return
+        }
+        
+        let imagePicker = UIImagePickerController()
+        imagePicker.delegate = self
+        imagePicker.sourceType = .photoLibrary
+        self.present(imagePicker, animated: true, completion: nil)
+    }
+    
+
+
     
     
 }
